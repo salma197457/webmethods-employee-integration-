@@ -1,0 +1,62 @@
+interface Employees.Data
+service exportEmployeesAsJSON (
+    output {
+        String employeesJson;
+    }
+)
+properties {
+    favorite: false;
+    deprecated: false;
+    visible: private;
+    reuse: private;
+    stateless: true;
+    cacheResults: false;
+    cacheExpire: 15;
+    prefetch: false;
+    prefetchActivation: 1;
+    pipelineDebug: None;
+    allowedHttpMethods: [TRACE, HEAD, DELETE, POST, GET, OPTIONS, PUT, PATCH];
+    maxRetryAttempts: 0;
+    retryInterval: 0;
+    enableAuditing: never;
+    logOn: Error only;
+    includePipeline: never;
+    circuitBreakerEnabled: false;
+    failureEvent: Exception only;
+    timeoutPeriod: 60;
+    cancelThreadOnTimeout: false;
+    failureThreshold: 5;
+    failurePeriod: 60;
+    circuitOpenAction: Throw exception;
+    circuitResetPeriod: 300;
+    concurrencyEnabled: false;
+    maxConcurrentRequests: 20;
+    validateInput: false;
+    validateOutput: false;
+}
+{
+    INVOKE Employees.Data:GetAllEmployees {
+        validateInput: false
+        validateOutput: false
+    }
+    MAP {
+        copy `TransformedEmployees` -> `EmployeesWrapper`/`TransformedEmployees`;
+    }
+    INVOKE pub.json:documentToJSON {
+        validateInput: false
+        validateOutput: false
+        input {
+            copy `EmployeesWrapper` -> `document`;
+        }
+        output {
+            mapTarget {
+                String employeesJson;
+            }
+            copy `jsonObj` -> `employeesJson`;
+            drop `document`;
+            drop `TransformedEmployees`;
+            drop `EmployeesWrapper`;
+            drop `jsonObj`;
+        }
+    }
+}

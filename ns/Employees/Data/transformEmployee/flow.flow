@@ -1,0 +1,78 @@
+interface Employees.Data
+service transformEmployee (
+    input {
+        String EmployeeName;
+        Integer EmployeeId;
+        String EmployeeDesc;
+        String EmployeeTitle;
+    }
+    output {
+        String EmployeeOutput;
+    }
+)
+properties {
+    favorite: false;
+    deprecated: false;
+    visible: private;
+    reuse: private;
+    stateless: true;
+    cacheResults: false;
+    cacheExpire: 15;
+    prefetch: false;
+    prefetchActivation: 1;
+    pipelineDebug: None;
+    allowedHttpMethods: [TRACE, HEAD, DELETE, POST, GET, OPTIONS, PUT, PATCH];
+    maxRetryAttempts: 0;
+    retryInterval: 0;
+    enableAuditing: never;
+    logOn: Error only;
+    includePipeline: never;
+    circuitBreakerEnabled: false;
+    failureEvent: Exception only;
+    timeoutPeriod: 60;
+    cancelThreadOnTimeout: false;
+    failureThreshold: 5;
+    failurePeriod: 60;
+    circuitOpenAction: Throw exception;
+    circuitResetPeriod: 300;
+    concurrencyEnabled: false;
+    maxConcurrentRequests: 20;
+    validateInput: false;
+    validateOutput: false;
+}
+{
+    MAP {
+        set (variable) `test` = "%EmployeeId%";
+        set (variable) `EmployeeOutput` = "%EmployeeName% - %EmployeeDesc%";
+        copy `EmployeeName` -> `EmployeeName`;
+        copy `EmployeeId` -> `EmployeeId`;
+        copy `EmployeeDesc` -> `EmployeeDesc`;
+        copy `EmployeeTitle` -> `EmployeeTitle`;
+    }
+    INVOKE pub.string:objectToString {
+        validateInput: false
+        validateOutput: false
+        input {
+            copy `EmployeeId` -> `object`;
+        }
+        output {
+            mapTarget {
+                String test;
+            }
+            copy `string` -> `test`;
+            drop `string`;
+        }
+    }
+    MAP {
+        mapTarget {
+            String EmployeeOutput;
+        }
+        drop `object`;
+        drop `EmployeeName`;
+        drop `EmployeeId`;
+        drop `EmployeeTitle`;
+        drop `EmployeeDesc`;
+        drop `test`;
+        set (variable, globalvariables) `EmployeeOutput` = "%test%  %EmployeeName% is a %EmployeeTitle% that is a %EmployeeDesc%";
+    }
+}

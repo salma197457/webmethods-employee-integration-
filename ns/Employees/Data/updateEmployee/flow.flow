@@ -1,0 +1,92 @@
+interface Employees.Data
+service updateEmployee (
+    input {
+        record updateEmployee_Input {
+            allowUnspecifiedFields: true;
+        } {
+            String EmployeeName;
+            String Description;
+            String Email;
+            String Phone;
+            String JobTitle;
+            Integer EmployeeID_1;
+        };
+    }
+    output {
+        String ReturnResult;
+    }
+)
+properties {
+    favorite: false;
+    deprecated: false;
+    visible: private;
+    reuse: private;
+    stateless: true;
+    cacheResults: false;
+    cacheExpire: 15;
+    prefetch: false;
+    prefetchActivation: 1;
+    pipelineDebug: None;
+    allowedHttpMethods: [TRACE, HEAD, DELETE, POST, GET, OPTIONS, PUT, PATCH];
+    maxRetryAttempts: 0;
+    retryInterval: 0;
+    enableAuditing: never;
+    logOn: Error only;
+    includePipeline: never;
+    circuitBreakerEnabled: false;
+    failureEvent: Exception only;
+    timeoutPeriod: 60;
+    cancelThreadOnTimeout: false;
+    failureThreshold: 5;
+    failurePeriod: 60;
+    circuitOpenAction: Throw exception;
+    circuitResetPeriod: 300;
+    concurrencyEnabled: false;
+    maxConcurrentRequests: 20;
+    validateInput: false;
+    validateOutput: false;
+}
+{
+    INVOKE Employees.Data:generateCorrelationId {
+        validateInput: false
+        validateOutput: false
+    }
+    BRANCH {
+        evaluateLabels: true
+        SEQUENCE {
+            label: "updateEmployee_Input/EmployeeID_1 == null"
+            INVOKE HRDB:updateEmployee {
+                validateInput: false
+                validateOutput: false
+                input {
+                    copy `updateEmployee_Input`/`EmployeeName` -> `updateEmployeeInput`/`EmployeeName`;
+                    copy `updateEmployee_Input`/`Description` -> `updateEmployeeInput`/`Description`;
+                    copy `updateEmployee_Input`/`Email` -> `updateEmployeeInput`/`Email`;
+                    copy `updateEmployee_Input`/`Phone` -> `updateEmployeeInput`/`Phone`;
+                    copy `updateEmployee_Input`/`EmployeeID_1` -> `updateEmployeeInput`/`EmployeeID_1`;
+                }
+                output {
+                    drop `updateEmployeeInput`;
+                    drop `updateEmployee_Input`;
+                    drop `updateEmployeeOutput`;
+                }
+            }
+        }
+        SEQUENCE {
+            label: "$default"
+            MAP {
+                mapSource {
+                    String CorrelationId;
+                }
+                mapTarget {
+                    record ErrorMessage;
+                }
+                set `ErrorMessage`/`errorCode` = "ID required";
+                set `ErrorMessage`/`errorMessage` = "ID required";
+                copy `CorrelationId` -> `ErrorMessage`/`correlationId`;
+                set `ErrorMessage`/`serviceName` = "updateEmployee";
+                drop `CorrelationId`;
+            }
+        }
+    }
+}

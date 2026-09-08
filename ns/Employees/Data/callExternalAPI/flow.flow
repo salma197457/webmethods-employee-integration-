@@ -1,0 +1,93 @@
+interface Employees.Data
+service callExternalAPI (
+    input {
+        String URL;
+        String Method;
+    }
+    output {
+        String apiResponse;
+        String RetryCount;
+    }
+)
+properties {
+    favorite: false;
+    deprecated: false;
+    visible: private;
+    reuse: private;
+    stateless: true;
+    cacheResults: false;
+    cacheExpire: 15;
+    prefetch: false;
+    prefetchActivation: 1;
+    pipelineDebug: None;
+    allowedHttpMethods: [TRACE, HEAD, DELETE, POST, GET, OPTIONS, PUT, PATCH];
+    maxRetryAttempts: 0;
+    retryInterval: 0;
+    enableAuditing: never;
+    logOn: Error only;
+    includePipeline: never;
+    circuitBreakerEnabled: false;
+    failureEvent: Exception only;
+    timeoutPeriod: 60;
+    cancelThreadOnTimeout: false;
+    failureThreshold: 5;
+    failurePeriod: 60;
+    circuitOpenAction: Throw exception;
+    circuitResetPeriod: 300;
+    concurrencyEnabled: false;
+    maxConcurrentRequests: 20;
+    validateInput: false;
+    validateOutput: false;
+}
+{
+    MAP {
+        copy `URL` -> `URL`;
+        copy `Method` -> `Method`;
+    }
+    REPEAT {
+        count: 3
+        repeatInterval: 300
+        INVOKE pub.client:http {
+            validateInput: false
+            validateOutput: false
+            input {
+                copy `URL` -> `url`;
+                copy `Method` -> `method`;
+                set `timeout` = "10000";
+            }
+            output {
+                drop `Method`;
+                drop `URL`;
+                drop `method`;
+                drop `url`;
+            }
+        }
+        INVOKE pub.string:bytesToString {
+            validateInput: false
+            validateOutput: false
+            input {
+                copy `body`/`bytes` -> `bytes`;
+            }
+            output {
+                drop `apiResponse`;
+                drop `body`;
+                drop `header`;
+                drop `encodedURL`;
+                drop `bytes`;
+            }
+        }
+        MAP {
+            mapSource {
+                String string;
+            }
+            mapTarget {
+                String apiResponse;
+                String RetryCount;
+            }
+            copy `string` -> `apiResponse`;
+            drop `string`;
+            copy `$retries[$retries]` -> `RetryCount`;
+            drop `$retries[$retries]`;
+        }
+    }
+}

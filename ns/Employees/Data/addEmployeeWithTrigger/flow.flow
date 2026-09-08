@@ -1,0 +1,157 @@
+interface Employees.Data
+service addEmployeeWithTrigger (
+    input {
+        String Description;
+        String EmployeeName;
+        String Email;
+        String Phone;
+        String Department;
+        String JobTitle;
+        BigDecimal Salary;
+        Boolean IsActive;
+    }
+    output {
+        Integer ReturnResult;
+        String CorrelationID;
+    }
+)
+properties {
+    favorite: false;
+    deprecated: false;
+    visible: private;
+    reuse: private;
+    stateless: true;
+    cacheResults: false;
+    cacheExpire: 15;
+    prefetch: false;
+    prefetchActivation: 1;
+    pipelineDebug: None;
+    allowedHttpMethods: [TRACE, HEAD, DELETE, POST, GET, OPTIONS, PUT, PATCH];
+    maxRetryAttempts: 0;
+    retryInterval: 0;
+    enableAuditing: never;
+    logOn: Error only;
+    includePipeline: never;
+    circuitBreakerEnabled: false;
+    failureEvent: Exception only;
+    timeoutPeriod: 60;
+    cancelThreadOnTimeout: false;
+    failureThreshold: 5;
+    failurePeriod: 60;
+    circuitOpenAction: Throw exception;
+    circuitResetPeriod: 300;
+    concurrencyEnabled: false;
+    maxConcurrentRequests: 20;
+    validateInput: false;
+    validateOutput: false;
+}
+{
+    INVOKE Employees.Data:generateCorrelationId {
+        validateInput: false
+        validateOutput: false
+        output {
+            drop `Description`;
+        }
+    }
+    BRANCH {
+        evaluateLabels: true
+        SEQUENCE {
+            label: "Department == \"IT\""
+            INVOKE HRDB:insertEmployee {
+                validateInput: false
+                validateOutput: false
+                input {
+                    copy `Description` -> `insertEmployeeInput`/`Description`;
+                    copy `EmployeeName` -> `insertEmployeeInput`/`EmployeeName`;
+                    copy `Email` -> `insertEmployeeInput`/`Email`;
+                    copy `Phone` -> `insertEmployeeInput`/`Phone`;
+                    copy `Department` -> `insertEmployeeInput`/`Department`;
+                    copy `JobTitle` -> `insertEmployeeInput`/`JobTitle`;
+                    copy `Salary` -> `insertEmployeeInput`/`Salary`;
+                    copy `IsActive` -> `insertEmployeeInput`/`IsActive`;
+                }
+                output {
+                    drop `insertEmployeeInput`;
+                    drop `EmployeeName`;
+                    drop `Description`;
+                    drop `Email`;
+                    drop `Phone`;
+                    drop `Department`;
+                    drop `JobTitle`;
+                    drop `Salary`;
+                    drop `IsActive`;
+                    drop `test`;
+                }
+            }
+            MAP {
+                mapTarget {
+                    String ReturnResult;
+                    String CorrelationId;
+                }
+                drop `Salary`;
+                drop `JobTitle`;
+                drop `Department`;
+                drop `Phone`;
+                drop `Email`;
+                drop `EmployeeName`;
+                drop `Description`;
+                drop `insertEmployeeInput`;
+                drop `IsActive`;
+                drop `insertEmployeeOutput`;
+                copy `insertEmployeeOutput`/`ReturnResult` -> `ReturnResult`;
+                copy `CorrelationId` -> `CorrelationId`;
+            }
+            INVOKE pub.flow:debugLog {
+                validateInput: false
+                validateOutput: false
+                input {
+                    mapTarget {
+                        String message;
+                    }
+                    set (variable, globalvariables) `message` = "%CorrelationId% Employee added successfully";
+                }
+            }
+        }
+        SEQUENCE {
+            label: "$default"
+            MAP {
+                mapTarget {
+                    String ReturnResult;
+                    record ErrorResponse {
+                        allowUnspecifiedFields: true;
+                    } {
+                        record errorCode {
+                            allowUnspecifiedFields: true;
+                        } {
+                            String jn;
+                        };
+                        record errorMessage {
+                            allowUnspecifiedFields: true;
+                        };
+                        record serviceName {
+                            allowUnspecifiedFields: true;
+                        };
+                        record timestamp {
+                            allowUnspecifiedFields: true;
+                        };
+                    };
+                }
+                set `ReturnResult` = "0";
+                set `ErrorResponse`/`errorMessage` = "{}";
+                set `ErrorResponse`/`serviceName` = "{}";
+                set `ErrorResponse`/`timestamp` = "{}";
+                set `ErrorResponse`/`errorCode` = {`jn`:"nj"};
+            }
+            INVOKE pub.flow:clearPipeline {
+                validateInput: false
+                validateOutput: false
+                input {
+                    mapTarget {
+                        String[] preserve;
+                    }
+                    set `preserve` = ["ErrorResponse"];
+                }
+            }
+        }
+    }
+}

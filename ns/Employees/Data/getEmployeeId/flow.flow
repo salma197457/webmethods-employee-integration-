@@ -1,0 +1,71 @@
+interface Employees.Data
+service getEmployeeId (
+    input {
+        Integer Id;
+    }
+    output {
+        record mm (Employees.Documents:Employee);
+    }
+)
+properties {
+    favorite: false;
+    deprecated: false;
+    visible: private;
+    reuse: private;
+    stateless: true;
+    cacheResults: false;
+    cacheExpire: 15;
+    prefetch: false;
+    prefetchActivation: 1;
+    pipelineDebug: None;
+    allowedHttpMethods: [TRACE, HEAD, DELETE, POST, GET, OPTIONS, PUT, PATCH];
+    maxRetryAttempts: 0;
+    retryInterval: 0;
+    enableAuditing: never;
+    logOn: Error only;
+    includePipeline: never;
+    circuitBreakerEnabled: false;
+    failureEvent: Exception only;
+    timeoutPeriod: 60;
+    cancelThreadOnTimeout: false;
+    failureThreshold: 5;
+    failurePeriod: 60;
+    circuitOpenAction: Throw exception;
+    circuitResetPeriod: 300;
+    concurrencyEnabled: false;
+    maxConcurrentRequests: 20;
+    validateInput: false;
+    validateOutput: false;
+}
+{
+    MAP {
+        copy `Id` -> `Id`;
+    }
+    BRANCH {
+        evaluateLabels: true
+        SEQUENCE {
+            label: "Id < 4"
+            INVOKE HRDB:getEmployeeID2 {
+                validateInput: false
+                validateOutput: false
+                input {
+                    copy `Id` -> `getEmployeeID2Input`/`EmployeeID_1`;
+                }
+            }
+            MAP {
+                drop `Id`;
+                drop `getEmployeeID2Output`;
+                drop `getEmployeeID2Input`;
+            }
+        }
+        SEQUENCE {
+            label: "$default"
+            MAP {
+                mapTarget {
+                    String InvalidId;
+                }
+                set `InvalidId` = "Invalid id";
+            }
+        }
+    }
+}

@@ -1,0 +1,123 @@
+interface Employees.Data
+service addEmployee (
+    input {
+        String Description;
+        String EmployeeName;
+        String Email;
+        String Phone;
+        String Department;
+        String JobTitle;
+        BigDecimal Salary;
+        Boolean IsActive;
+    }
+    output {
+        Integer ReturnResult;
+    }
+)
+properties {
+    favorite: false;
+    deprecated: false;
+    visible: private;
+    reuse: private;
+    stateless: true;
+    cacheResults: false;
+    cacheExpire: 15;
+    prefetch: false;
+    prefetchActivation: 1;
+    pipelineDebug: None;
+    allowedHttpMethods: [TRACE, HEAD, DELETE, POST, GET, OPTIONS, PUT, PATCH];
+    maxRetryAttempts: 0;
+    retryInterval: 0;
+    enableAuditing: never;
+    logOn: Error only;
+    includePipeline: never;
+    circuitBreakerEnabled: false;
+    failureEvent: Exception only;
+    timeoutPeriod: 60;
+    cancelThreadOnTimeout: false;
+    failureThreshold: 5;
+    failurePeriod: 60;
+    circuitOpenAction: Throw exception;
+    circuitResetPeriod: 300;
+    concurrencyEnabled: false;
+    maxConcurrentRequests: 20;
+    validateInput: false;
+    validateOutput: false;
+}
+{
+    BRANCH {
+        evaluateLabels: true
+        SEQUENCE {
+            label: "Department == \"IT\""
+            INVOKE HRDB:insertEmployee {
+                validateInput: false
+                validateOutput: false
+                input {
+                    copy `Salary` -> `insertEmployeeInput`/`Salary`;
+                    copy `IsActive` -> `insertEmployeeInput`/`IsActive`;
+                }
+                output {
+                    drop `insertEmployeeInput`;
+                    drop `EmployeeName`;
+                    drop `Description`;
+                    drop `Email`;
+                    drop `Phone`;
+                    drop `Department`;
+                    drop `JobTitle`;
+                    drop `Salary`;
+                    drop `IsActive`;
+                    drop `test`;
+                }
+            }
+            MAP {
+                mapTarget {
+                    String jobTitle;
+                    String ReturnResult;
+                }
+                drop `Salary`;
+                drop `JobTitle`;
+                drop `Department`;
+                drop `Phone`;
+                drop `Email`;
+                drop `EmployeeName`;
+                drop `Description`;
+                drop `insertEmployeeInput`;
+                drop `IsActive`;
+                drop `insertEmployeeOutput`;
+                copy `insertEmployeeOutput`/`ReturnResult` -> `ReturnResult`;
+                copy `JobTitle` -> `jobTitle`;
+            }
+            MAP {
+                mapTarget {
+                    String JobTitle;
+                }
+                drop `jobTitle`;
+                drop `EmployeeName`;
+                drop `ReturnResult`;
+                copy `jobTitle` -> `JobTitle`;
+            }
+            INVOKE Employees.Data:publishEmployeeAdded {
+                validateInput: false
+                validateOutput: false
+            }
+            MAP {
+                mapTarget {
+                    String ReturnResult;
+                }
+                drop `publishEmployee`;
+                drop `insertEmployeeOutput`;
+                drop `Employee`;
+                copy `insertEmployeeOutput`/`ReturnResult` -> `ReturnResult`;
+            }
+        }
+        SEQUENCE {
+            label: "$default"
+            MAP {
+                mapTarget {
+                    String ReturnResult;
+                }
+                set `ReturnResult` = "0";
+            }
+        }
+    }
+}
