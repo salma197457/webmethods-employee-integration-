@@ -49,16 +49,30 @@ properties {
         INVOKE Employees.Data:transformEmployee {
             validateInput: false
             validateOutput: false
-            output {
-                mapSource {
-                    String EmployeeOutput;
-                }
+            input {
                 mapTarget {
-                    recordList TransformedEmployees {
+                    String EmployeeName;
+                    String EmployeeDesc;
+                    String EmployeeTitle;
+                    String EmployeeId;
+                }
+                copy `GetAllEmployeesOutput`/`results`/`EmployeeName` -> `EmployeeName`;
+                copy `GetAllEmployeesOutput`/`results`/`Description` -> `EmployeeDesc`;
+                copy `GetAllEmployeesOutput`/`results`/`JobTitle` -> `EmployeeTitle`;
+                copy `GetAllEmployeesOutput`/`results`/`EmployeeID` -> `EmployeeId`;
+            }
+            output {
+                mapTarget {
+                    record TransformedEmployees {
                         String EmployeeOutput;
                     };
                 }
                 copy `EmployeeOutput` -> `TransformedEmployees`/`EmployeeOutput`;
+                drop `EmployeeId`;
+                drop `EmployeeDesc`;
+                drop `EmployeeName`;
+                drop `EmployeeTitle`;
+                drop `GetAllEmployeesOutput`;
             }
         }
     }

@@ -42,7 +42,7 @@
             <value name="messageType">Employees.Documents:EmployeeAddedEvent</value>
             <value name="filter"></value>
           </record>
-          <value name="serviceName">Employees.Data:addEmployeeWithTrigger</value>
+          <value name="serviceName">Employees.Data:addEmployee</value>
           <value name="conditionName">Condition1</value>
         </record>
       </record>

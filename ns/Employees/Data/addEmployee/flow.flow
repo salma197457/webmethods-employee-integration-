@@ -9,9 +9,11 @@ service addEmployee (
         String JobTitle;
         BigDecimal Salary;
         Boolean IsActive;
+        String hireDate;
     }
     output {
         Integer ReturnResult;
+        String CorrelationID;
     }
 )
 properties {
@@ -45,6 +47,10 @@ properties {
     validateOutput: false;
 }
 {
+    INVOKE Employees.Data:generateCorrelationId {
+        validateInput: false
+        validateOutput: false
+    }
     BRANCH {
         evaluateLabels: true
         SEQUENCE {
@@ -53,8 +59,33 @@ properties {
                 validateInput: false
                 validateOutput: false
                 input {
-                    copy `Salary` -> `insertEmployeeInput`/`Salary`;
+                    mapTarget {
+                        record insertEmployeeInput {
+                            allowUnspecifiedFields: true;
+                        } {
+                            record overrideCredentials {
+                                allowUnspecifiedFields: true;
+                            };
+                            String EmployeeName;
+                            String Description;
+                            String Email;
+                            String Phone;
+                            String JobTitle;
+                            String Department;
+                            BigDecimal Salary;
+                            String HireDate;
+                            Boolean IsActive;
+                        };
+                    }
+                    copy `EmployeeName` -> `insertEmployeeInput`/`EmployeeName`;
+                    copy `Email` -> `insertEmployeeInput`/`Email`;
+                    copy `Phone` -> `insertEmployeeInput`/`Phone`;
+                    copy `Department` -> `insertEmployeeInput`/`Department`;
+                    copy `JobTitle` -> `insertEmployeeInput`/`JobTitle`;
                     copy `IsActive` -> `insertEmployeeInput`/`IsActive`;
+                    copy `Salary` -> `insertEmployeeInput`/`Salary`;
+                    copy `Description` -> `insertEmployeeInput`/`Description`;
+                    copy `hireDate` -> `insertEmployeeInput`/`HireDate`;
                 }
                 output {
                     drop `insertEmployeeInput`;
@@ -71,8 +102,8 @@ properties {
             }
             MAP {
                 mapTarget {
-                    String jobTitle;
                     String ReturnResult;
+                    String CorrelationId;
                 }
                 drop `Salary`;
                 drop `JobTitle`;
@@ -84,39 +115,40 @@ properties {
                 drop `insertEmployeeInput`;
                 drop `IsActive`;
                 drop `insertEmployeeOutput`;
-                copy `insertEmployeeOutput`/`ReturnResult` -> `ReturnResult`;
-                copy `JobTitle` -> `jobTitle`;
+                copy `CorrelationId` -> `CorrelationId`;
+                copy `insertEmployeeOutput` -> `ReturnResult`;
             }
-            MAP {
-                mapTarget {
-                    String JobTitle;
-                }
-                drop `jobTitle`;
-                drop `EmployeeName`;
-                drop `ReturnResult`;
-                copy `jobTitle` -> `JobTitle`;
-            }
-            INVOKE Employees.Data:publishEmployeeAdded {
+            INVOKE pub.flow:debugLog {
                 validateInput: false
                 validateOutput: false
-            }
-            MAP {
-                mapTarget {
-                    String ReturnResult;
+                input {
+                    mapTarget {
+                        String message;
+                    }
+                    set (variable, globalvariables) `message` = "%CorrelationId% Employee added successfully";
                 }
-                drop `publishEmployee`;
-                drop `insertEmployeeOutput`;
-                drop `Employee`;
-                copy `insertEmployeeOutput`/`ReturnResult` -> `ReturnResult`;
             }
         }
         SEQUENCE {
             label: "$default"
             MAP {
                 mapTarget {
+                    record ErrorResponsee {
+                        allowUnspecifiedFields: true;
+                    } {
+                        String errorMessage;
+                        String correlationId;
+                        String serviceName;
+                        String errorCode;
+                    };
                     String ReturnResult;
                 }
                 set `ReturnResult` = "0";
+                set `ErrorResponsee`/`errorMessage` = "Error inserting employee";
+                copy `CorrelationId` -> `ErrorResponsee`/`correlationId`;
+                set `ErrorResponsee`/`serviceName` = "insertEmployee";
+                set `ErrorResponsee`/`errorCode` = "Failure";
+                drop `insertEmployeeOutput`;
             }
         }
     }
